@@ -92,27 +92,25 @@ impl UserDbService {
         email: &str,
         password: &str,
     ) -> Result<User, UserDbError> {
-        let mut statement = self.conn.prepare(
-            "SELECT uuid, displayName FROM user WHERE email=:email AND password=:password limit 1;"
-        ).unwrap();
-
-        let user_iter = statement
-            .query_map(&[(":email", email), (":password", password)], |row| {
-                Ok(User {
-                    uuid: row.get(0)?,
-                    display_name: row.get(1)?,
-                    email: email.to_owned(),
+        if let Ok(mut statement) = self.conn.prepare(
+            "SELECT uuid, displayName FROM user WHERE email=:email AND password=:password limit 1;",
+        ) {
+            if let Ok(user_iter) =
+                statement.query_map(&[(":email", email), (":password", password)], |row| {
+                    Ok(User {
+                        uuid: row.get(0)?,
+                        display_name: row.get(1)?,
+                        email: email.to_owned(),
+                    })
                 })
-            })
-            .unwrap();
+            {
+                let user_vec: Vec<_> = user_iter.collect();
 
-        let mut user_vec: Vec<_> = user_iter.collect();
-
-        if user_vec.len() > 0 {
-            let selected_user = user_vec.swap_remove(0);
-            if let Ok(user) = selected_user {
-                log::info!("{:?}", user);
-                return Ok(user);
+                if let Some(selected_user) = user_vec.get(0) {
+                    if let Ok(user) = selected_user {
+                        return Ok(user.clone());
+                    }
+                }
             }
         }
 
