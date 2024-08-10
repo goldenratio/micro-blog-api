@@ -3,7 +3,7 @@ use derive_more::Display;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::app_data::app_state::AppState;
+use crate::{app_data::app_state::AppState, services::user_db_service::UserDbError};
 
 use super::error_response::AppErrorResponse;
 
@@ -54,9 +54,8 @@ impl ResponseError for LoginError {
         let status = self.status_code();
 
         match self {
-            LoginError::InvalidEmailOrPassword => {
-                HttpResponse::build(status).json(AppErrorResponse::from(LoginError::InvalidEmailOrPassword))
-            }
+            LoginError::InvalidEmailOrPassword => HttpResponse::build(status)
+                .json(AppErrorResponse::from(LoginError::InvalidEmailOrPassword)),
             LoginError::GenericError => {
                 HttpResponse::build(status).json(AppErrorResponse::from(LoginError::GenericError))
             }
@@ -77,15 +76,23 @@ impl ResponseError for RegisterError {
         let status = self.status_code();
 
         match self {
-            RegisterError::DisplayNameAlreadyExist => {
-                HttpResponse::build(status).json(AppErrorResponse::from(RegisterError::DisplayNameAlreadyExist))
-            }
-            RegisterError::EmailAlreadyExist => {
-                HttpResponse::build(status).json(AppErrorResponse::from(RegisterError::EmailAlreadyExist))
-            }
-            RegisterError::GenericError => {
-                HttpResponse::build(status).json(AppErrorResponse::from(RegisterError::GenericError))
-            }
+            RegisterError::DisplayNameAlreadyExist => HttpResponse::build(status).json(
+                AppErrorResponse::from(RegisterError::DisplayNameAlreadyExist),
+            ),
+            RegisterError::EmailAlreadyExist => HttpResponse::build(status)
+                .json(AppErrorResponse::from(RegisterError::EmailAlreadyExist)),
+            RegisterError::GenericError => HttpResponse::build(status)
+                .json(AppErrorResponse::from(RegisterError::GenericError)),
+        }
+    }
+}
+
+impl From<UserDbError> for RegisterError {
+    fn from(value: UserDbError) -> Self {
+        match value {
+            UserDbError::UserWithEmailAlreadyExist => RegisterError::EmailAlreadyExist,
+            UserDbError::UserWithDisplayNameAlreadyExist => RegisterError::DisplayNameAlreadyExist,
+            _ => RegisterError::GenericError,
         }
     }
 }
@@ -93,7 +100,7 @@ impl ResponseError for RegisterError {
 #[post("/login")]
 async fn auth_login(param_obj: web::Json<LoginRequestData>) -> Result<impl Responder, LoginError> {
     let payload = param_obj.into_inner();
-    println!("/auth {:?}", payload);
+    log::trace!("/auth {:?}", payload);
 
     if payload.email.as_str() == "bar@example.com" {
         let response_data = LoginSuccessResponse {
@@ -112,24 +119,20 @@ async fn auth_register(
     state: web::Data<AppState>,
 ) -> Result<impl Responder, RegisterError> {
     let payload = param_obj.into_inner();
-    println!("/register {:?}", payload);
+    log::trace!("/register {:?}", payload);
 
     let user_db_service = state.user_db_service.lock().unwrap();
     let uuid = Uuid::new_v4();
     let uuid_str = uuid.to_string();
 
-    match user_db_service.add_user(
+    if let Err(db_err) = user_db_service.add_user(
         &payload.email,
         &payload.password,
         &payload.display_name,
         &uuid_str,
     ) {
-        Ok(_) => {
-            return Ok(HttpResponse::Ok());
-        }
-        Err(err) => {
-            println!("{:?}", err);
-            return Err(RegisterError::GenericError);
-        }
+        return Err(RegisterError::from(db_err));
     }
+
+    return Ok(HttpResponse::Ok());
 }

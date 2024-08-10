@@ -18,11 +18,12 @@ impl UserDbService {
             Ok(conn) => {
                 match conn.execute(
                     "CREATE TABLE IF NOT EXISTS user (
-                        id          INTEGER PRIMARY KEY,
-                        email       TEXT NOT NULL UNIQUE,
-                        password    TEXT NOT NULL,
-                        displayName TEXT NOT NULL UNIQUE,
-                        uuid        TEXT NOT NULL UNIQUE
+                        id               INTEGER PRIMARY KEY,
+                        email            TEXT NOT NULL UNIQUE,
+                        password         TEXT NOT NULL,
+                        displayName      TEXT NOT NULL UNIQUE,
+                        uuid             TEXT NOT NULL UNIQUE,
+                        emailVerified    INTEGER NOT NULL
                     )",
                     (), // empty list of parameters.
                 ) {
@@ -48,15 +49,32 @@ impl UserDbService {
         uuid: &str,
     ) -> Result<(), UserDbError> {
         match self.conn.execute(
-            "INSERT INTO user (email, password, displayName, uuid) VALUES (?1, ?2, ?3, ?4)",
-            (email, password, display_name, uuid),
+            "INSERT INTO user (email, password, displayName, uuid, emailVerified) VALUES (?1, ?2, ?3, ?4, ?5)",
+            (email, password, display_name, uuid, 0),
         ) {
             Ok(_) => {
                 return Ok(());
             }
             Err(err) => {
-                println!("{:?}", err);
-                return Err(UserDbError::GenericError);
+                log::error!("{:?}", err);
+                let db_err = match err {
+                    rusqlite::Error::SqliteFailure(sqlite_err, msg) => {
+                        if sqlite_err.code == rusqlite::ErrorCode::ConstraintViolation {
+                            let err_msg = msg.unwrap_or("-".to_string());
+                            if err_msg.contains("user.displayName)") {
+                                UserDbError::UserWithDisplayNameAlreadyExist
+                            } else if err_msg.contains("user.email)") {
+                                UserDbError::UserWithEmailAlreadyExist
+                            } else {
+                                UserDbError::GenericError
+                            }
+                        } else {
+                            UserDbError::GenericError
+                        }
+                    }
+                    _ => UserDbError::GenericError,
+                };
+                return Err(db_err);
             }
         }
     }
