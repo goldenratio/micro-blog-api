@@ -1,6 +1,7 @@
 use actix_web::{http::StatusCode, post, web, HttpResponse, Responder, ResponseError};
 use derive_more::Display;
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 use crate::app_data::app_state::AppState;
 
@@ -102,7 +103,7 @@ async fn auth_login(param_obj: web::Json<LoginRequestData>) -> Result<impl Respo
         return Ok(web::Json(response_data));
     }
 
-    return Err(LoginError::InvalidEmailOrPassword);
+    return Err(LoginError::GenericError);
 }
 
 #[post("/register")]
@@ -114,19 +115,21 @@ async fn auth_register(
     println!("/register {:?}", payload);
 
     let user_db_service = state.user_db_service.lock().unwrap();
-    let uuid = "000-2121";
+    let uuid = Uuid::new_v4();
+    let uuid_str = uuid.to_string();
 
     match user_db_service.add_user(
         &payload.email,
         &payload.password,
         &payload.display_name,
-        uuid,
+        &uuid_str,
     ) {
         Ok(_) => {
             return Ok(HttpResponse::Ok());
         }
-        Err(_) => {
-            return Err(RegisterError::EmailAlreadyExist);
+        Err(err) => {
+            println!("{:?}", err);
+            return Err(RegisterError::GenericError);
         }
     }
 }

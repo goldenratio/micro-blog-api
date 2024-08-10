@@ -4,6 +4,7 @@ use rusqlite::Connection;
 pub enum UserDbError {
     GenericError,
     UserWithEmailAlreadyExist,
+    UserWithDisplayNameAlreadyExist,
 }
 
 #[derive(Debug)]
