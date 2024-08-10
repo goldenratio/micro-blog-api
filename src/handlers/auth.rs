@@ -98,19 +98,27 @@ impl From<UserDbError> for RegisterError {
 }
 
 #[post("/login")]
-async fn auth_login(param_obj: web::Json<LoginRequestData>) -> Result<impl Responder, LoginError> {
+async fn auth_login(
+    param_obj: web::Json<LoginRequestData>,
+    state: web::Data<AppState>,
+) -> Result<(impl Responder), LoginError> {
     let payload = param_obj.into_inner();
     log::trace!("/auth {:?}", payload);
 
-    if payload.email.as_str() == "bar@example.com" {
+    let user_db_service = state.user_db_service.lock().unwrap();
+
+    if let Ok(auth_user) =
+        user_db_service.get_user_from_email_and_password(&payload.email, &payload.password)
+    {
+        log::info!("brrrr {:?}", auth_user);
         let response_data = LoginSuccessResponse {
             jwt_token: "123".to_string(),
-            user_id: "1456".to_string(),
+            user_id: auth_user.uuid,
         };
         return Ok(web::Json(response_data));
     }
 
-    return Err(LoginError::GenericError);
+    return Err(LoginError::InvalidEmailOrPassword);
 }
 
 #[post("/register")]

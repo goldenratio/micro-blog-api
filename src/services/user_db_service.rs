@@ -5,11 +5,19 @@ pub enum UserDbError {
     GenericError,
     UserWithEmailAlreadyExist,
     UserWithDisplayNameAlreadyExist,
+    UserNotFound,
 }
 
 #[derive(Debug)]
 pub struct UserDbService {
-    pub conn: Connection,
+    conn: Connection,
+}
+
+#[derive(Debug, Clone)]
+pub struct User {
+    pub uuid: String,
+    pub display_name: String,
+    pub email: String,
 }
 
 impl UserDbService {
@@ -49,8 +57,8 @@ impl UserDbService {
         uuid: &str,
     ) -> Result<(), UserDbError> {
         match self.conn.execute(
-            "INSERT INTO user (email, password, displayName, uuid, emailVerified) VALUES (?1, ?2, ?3, ?4, ?5)",
-            (email, password, display_name, uuid, 0),
+            "INSERT INTO user (email, password, displayName, uuid, emailVerified) VALUES (?1, ?2, ?3, ?4, 0)",
+            (email, password, display_name, uuid),
         ) {
             Ok(_) => {
                 return Ok(());
@@ -77,5 +85,37 @@ impl UserDbService {
                 return Err(db_err);
             }
         }
+    }
+
+    pub fn get_user_from_email_and_password(
+        &self,
+        email: &str,
+        password: &str,
+    ) -> Result<User, UserDbError> {
+        let mut statement = self.conn.prepare(
+            "SELECT uuid, displayName FROM user WHERE email=:email AND password=:password limit 1;"
+        ).unwrap();
+
+        let user_iter = statement
+            .query_map(&[(":email", email), (":password", password)], |row| {
+                Ok(User {
+                    uuid: row.get(0)?,
+                    display_name: row.get(1)?,
+                    email: email.to_owned(),
+                })
+            })
+            .unwrap();
+
+        let mut user_vec: Vec<_> = user_iter.collect();
+
+        if user_vec.len() > 0 {
+            let selected_user = user_vec.swap_remove(0);
+            if let Ok(user) = selected_user {
+                log::info!("{:?}", user);
+                return Ok(user);
+            }
+        }
+
+        return Err(UserDbError::UserNotFound);
     }
 }
