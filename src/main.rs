@@ -1,39 +1,13 @@
 mod handlers;
 mod services;
+mod app_data;
 
-use std::sync::Mutex;
-
-use actix_web::{error, get, middleware, post, web, App, HttpResponse, HttpServer, Responder};
+use actix_web::{error, middleware, web, App, HttpResponse, HttpServer};
+use app_data::app_state::AppState;
 use handlers::{
     auth::{auth_login, auth_register},
-    error_response::AppErrorResponse,
+    error_response::AppErrorResponse, health_check::health_check,
 };
-use services::user_db_service::UserDbService;
-
-#[derive(Debug)]
-pub struct AppState {
-    pub user_db_service: Mutex<UserDbService>,
-}
-
-impl AppState {
-    pub fn new() -> Self {
-        let user_db_service = UserDbService::connect().unwrap(); // web::Data::new();
-        Self {
-            user_db_service: Mutex::from(user_db_service),
-        }
-    }
-}
-
-#[get("/hello")]
-async fn hello() -> impl Responder {
-    HttpResponse::Ok().body("Hello world!")
-}
-
-#[post("/echo")]
-async fn echo(req_body: String) -> impl Responder {
-    println!("{}", req_body);
-    HttpResponse::Ok().body(req_body)
-}
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -50,15 +24,14 @@ async fn main() -> std::io::Result<()> {
                         return error::InternalError::from_response(
                             err,
                             HttpResponse::BadRequest().json(AppErrorResponse {
-                                errorCode: 0,
-                                errorMessage: "Invalid request payload".to_string(),
+                                error_code: 0,
+                                error_message: "Invalid request payload".to_string(),
                             }),
                         )
                         .into();
                     }),
             )
-            .service(hello)
-            .service(echo)
+            .service(health_check)
             .service(
                 web::scope("/auth")
                     .service(auth_login)

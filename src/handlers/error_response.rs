@@ -2,6 +2,6 @@ use serde::Serialize;
 
 #[derive(Serialize, Debug)]
 pub struct AppErrorResponse {
-    pub errorCode: i16,
-    pub errorMessage: String,
+    pub error_code: i16,
+    pub error_message: String,
 }

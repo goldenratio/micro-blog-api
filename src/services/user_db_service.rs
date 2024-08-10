@@ -18,10 +18,10 @@ impl UserDbService {
                 match conn.execute(
                     "CREATE TABLE IF NOT EXISTS user (
                         id          INTEGER PRIMARY KEY,
-                        email       TEXT NOT NULL,
+                        email       TEXT NOT NULL UNIQUE,
                         password    TEXT NOT NULL,
-                        displayName TEXT NOT NULL,
-                        uuid        TEXT NOT NULL
+                        displayName TEXT NOT NULL UNIQUE,
+                        uuid        TEXT NOT NULL UNIQUE
                     )",
                     (), // empty list of parameters.
                 ) {
@@ -53,7 +53,8 @@ impl UserDbService {
             Ok(_) => {
                 return Ok(());
             }
-            Err(_) => {
+            Err(err) => {
+                println!("{:?}", err);
                 return Err(UserDbError::GenericError);
             }
         }

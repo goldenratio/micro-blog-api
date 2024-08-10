@@ -2,7 +2,7 @@ use actix_web::{http::StatusCode, post, web, HttpResponse, Responder, ResponseEr
 use derive_more::Display;
 use serde::{Deserialize, Serialize};
 
-use crate::AppState;
+use crate::app_data::app_state::AppState;
 
 use super::error_response::AppErrorResponse;
 
@@ -58,13 +58,13 @@ impl ResponseError for LoginError {
         match self {
             LoginError::InvalidUsernameOrPassword => {
                 HttpResponse::build(status).json(AppErrorResponse {
-                    errorCode: 0,
-                    errorMessage: "Invalid username or password".to_string(),
+                    error_code: 0,
+                    error_message: "Invalid username or password".to_string(),
                 })
             }
             LoginError::GenericError => HttpResponse::build(status).json(AppErrorResponse {
-                errorCode: 0,
-                errorMessage: "Generic Error".to_string(),
+                error_code: 0,
+                error_message: "Generic Error".to_string(),
             }),
         }
     }
@@ -106,7 +106,7 @@ async fn auth_register(
         uuid,
     ) {
         Ok(_) => {
-            return Ok(web::Json({}));
+            return Ok(HttpResponse::Ok());
         }
         Err(_) => {
             return Err(RegisterError::EmailAlreadyExist);
