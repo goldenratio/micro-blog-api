@@ -8,46 +8,43 @@ use super::error_response::AppErrorResponse;
 
 #[derive(Serialize, Debug, Display)]
 pub enum LoginError {
-    GenericError,
-    InvalidUsernameOrPassword,
+    GenericError = 10011,
+    InvalidEmailOrPassword,
 }
 
 #[derive(Serialize, Debug, Display)]
 pub enum RegisterError {
-    GenericError,
+    GenericError = 10021,
     EmailAlreadyExist,
+    DisplayNameAlreadyExist,
 }
 
 #[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
 struct LoginRequestData {
-    #[serde(rename = "email")]
     email: String,
-    #[serde(rename = "password")]
     password: String,
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 struct LoginSuccessResponse {
-    #[serde(rename = "jwtToken")]
     jwt_token: String,
-    #[serde(rename = "userId")]
     user_id: String,
 }
 
 #[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
 struct RegisterRequestData {
-    #[serde(rename = "email")]
     email: String,
-    #[serde(rename = "password")]
     password: String,
-    #[serde(rename = "displayName")]
     display_name: String,
 }
 
 impl ResponseError for LoginError {
     fn status_code(&self) -> StatusCode {
         match self {
-            LoginError::InvalidUsernameOrPassword => StatusCode::BAD_REQUEST,
+            LoginError::InvalidEmailOrPassword => StatusCode::BAD_REQUEST,
             LoginError::GenericError => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
@@ -56,21 +53,41 @@ impl ResponseError for LoginError {
         let status = self.status_code();
 
         match self {
-            LoginError::InvalidUsernameOrPassword => {
-                HttpResponse::build(status).json(AppErrorResponse {
-                    error_code: 0,
-                    error_message: "Invalid username or password".to_string(),
-                })
+            LoginError::InvalidEmailOrPassword => {
+                HttpResponse::build(status).json(AppErrorResponse::from(LoginError::InvalidEmailOrPassword))
             }
-            LoginError::GenericError => HttpResponse::build(status).json(AppErrorResponse {
-                error_code: 0,
-                error_message: "Generic Error".to_string(),
-            }),
+            LoginError::GenericError => {
+                HttpResponse::build(status).json(AppErrorResponse::from(LoginError::GenericError))
+            }
         }
     }
 }
 
-impl ResponseError for RegisterError {}
+impl ResponseError for RegisterError {
+    fn status_code(&self) -> StatusCode {
+        match self {
+            RegisterError::DisplayNameAlreadyExist => StatusCode::BAD_REQUEST,
+            RegisterError::EmailAlreadyExist => StatusCode::BAD_REQUEST,
+            RegisterError::GenericError => StatusCode::INTERNAL_SERVER_ERROR,
+        }
+    }
+
+    fn error_response(&self) -> HttpResponse {
+        let status = self.status_code();
+
+        match self {
+            RegisterError::DisplayNameAlreadyExist => {
+                HttpResponse::build(status).json(AppErrorResponse::from(RegisterError::DisplayNameAlreadyExist))
+            }
+            RegisterError::EmailAlreadyExist => {
+                HttpResponse::build(status).json(AppErrorResponse::from(RegisterError::EmailAlreadyExist))
+            }
+            RegisterError::GenericError => {
+                HttpResponse::build(status).json(AppErrorResponse::from(RegisterError::GenericError))
+            }
+        }
+    }
+}
 
 #[post("/login")]
 async fn auth_login(param_obj: web::Json<LoginRequestData>) -> Result<impl Responder, LoginError> {
@@ -85,7 +102,7 @@ async fn auth_login(param_obj: web::Json<LoginRequestData>) -> Result<impl Respo
         return Ok(web::Json(response_data));
     }
 
-    return Err(LoginError::InvalidUsernameOrPassword);
+    return Err(LoginError::InvalidEmailOrPassword);
 }
 
 #[post("/register")]
