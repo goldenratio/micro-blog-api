@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 actix-web = "4"
+bcrypt = "0.15.1"
 chrono = "0.4.31"
 derive_more = "0.99.18"
 dotenv = "0.15.0"

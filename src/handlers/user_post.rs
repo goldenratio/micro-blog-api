@@ -21,6 +21,12 @@ struct UserPostRequest {
     post: String,
 }
 
+#[derive(Serialize, Debug)]
+#[serde(rename_all = "camelCase")]
+struct UserPostResponse {
+    post_uuid: String,
+}
+
 impl ResponseError for UserPostError {
     fn status_code(&self) -> StatusCode {
         match self {
@@ -91,7 +97,7 @@ async fn user_post(
     };
 
     match res {
-        Ok(_) => Ok(HttpResponse::Ok()),
+        Ok(post_uuid) => Ok(web::Json(UserPostResponse { post_uuid })),
         Err(err) => Err(err),
     }
 }

@@ -29,7 +29,8 @@ async fn main() -> std::io::Result<()> {
                     .error_handler(|err, _req| {
                         return error::InternalError::from_response(
                             err,
-                            HttpResponse::BadRequest().json(AppErrorResponse::from(AppError::InvalidRequestPayload)),
+                            HttpResponse::BadRequest()
+                                .json(AppErrorResponse::from(AppError::InvalidRequestPayload)),
                         )
                         .into();
                     }),

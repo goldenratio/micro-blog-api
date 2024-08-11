@@ -1,4 +1,5 @@
 use actix_web::{http::StatusCode, post, web, HttpResponse, Responder, ResponseError};
+use bcrypt::{hash, verify, DEFAULT_COST};
 use chrono::{Duration, Utc};
 use derive_more::Display;
 use jsonwebtoken::{encode, EncodingKey, Header};
@@ -16,7 +17,8 @@ pub enum AppError {
 
 #[derive(Serialize, Debug, Display)]
 pub enum LoginError {
-    InvalidEmailOrPassword = 10011,
+    GenericError = 10011,
+    InvalidEmailOrPassword,
 }
 
 #[derive(Serialize, Debug, Display)]
@@ -37,6 +39,7 @@ struct LoginRequestData {
 #[serde(rename_all = "camelCase")]
 struct LoginSuccessResponse {
     jwt_token: String,
+    uuid: String,
 }
 
 #[derive(Deserialize, Debug)]
@@ -45,6 +48,12 @@ struct RegisterRequestData {
     email: String,
     password: String,
     display_name: String,
+}
+
+#[derive(Serialize, Debug)]
+#[serde(rename_all = "camelCase")]
+struct RegisterResponseData {
+    uuid: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -67,7 +76,8 @@ impl UserClaims {
 impl ResponseError for LoginError {
     fn status_code(&self) -> StatusCode {
         match self {
-            LoginError::InvalidEmailOrPassword => StatusCode::BAD_REQUEST
+            LoginError::GenericError => StatusCode::INTERNAL_SERVER_ERROR,
+            LoginError::InvalidEmailOrPassword => StatusCode::BAD_REQUEST,
         }
     }
 
@@ -75,8 +85,11 @@ impl ResponseError for LoginError {
         let status = self.status_code();
 
         match self {
+            LoginError::GenericError => {
+                HttpResponse::build(status).json(AppErrorResponse::from(LoginError::GenericError))
+            }
             LoginError::InvalidEmailOrPassword => HttpResponse::build(status)
-                .json(AppErrorResponse::from(LoginError::InvalidEmailOrPassword))
+                .json(AppErrorResponse::from(LoginError::InvalidEmailOrPassword)),
         }
     }
 }
@@ -124,26 +137,38 @@ async fn auth_login(
     log::trace!("/auth {:?}", payload);
 
     let user_db_service = state.user_db_service.lock().unwrap();
+    let hashed_password = hash(payload.password.clone(), DEFAULT_COST);
+    if hashed_password.is_err() {
+        return Err(LoginError::GenericError);
+    }
 
-    if let Ok(auth_user) =
-        user_db_service.get_user_from_email_and_password(&payload.email, &payload.password)
-    {
-        let claims = UserClaims::new(
-            state.env_settings.user_jwt_expiration_minutes,
-            auth_user.uuid.clone(),
-        );
+    if let Ok(password_from_db) = user_db_service.get_password_from_email(&payload.email) {
+        if let Ok(valid) = verify(&payload.password, &password_from_db) {
+            if !valid {
+                return Err(LoginError::InvalidEmailOrPassword);
+            }
+            // get user struct from DB
+            if let Ok(auth_user) = user_db_service.get_user_from_email(&payload.email) {
+                let claims = UserClaims::new(
+                    state.env_settings.user_jwt_expiration_minutes,
+                    auth_user.uuid.clone(),
+                );
 
-        if let Ok(jwt_token) = encode(
-            &Header::default(),
-            &claims,
-            &EncodingKey::from_secret(state.env_settings.user_jwt_secret.as_ref()),
-        ) {
-            let response_data = LoginSuccessResponse { jwt_token };
-            return Ok(web::Json(response_data));
-        } else {
-            log::error!("error generating jwt token for user: {:?}", &payload.email);
+                if let Ok(jwt_token) = encode(
+                    &Header::default(),
+                    &claims,
+                    &EncodingKey::from_secret(state.env_settings.user_jwt_secret.as_ref()),
+                ) {
+                    let response_data = LoginSuccessResponse {
+                        jwt_token,
+                        uuid: auth_user.uuid,
+                    };
+                    return Ok(web::Json(response_data));
+                } else {
+                    log::error!("error generating jwt token for user: {:?}", &payload.email);
+                }
+            }
         }
-        // return Err(LoginError::GenericError);
     }
 
     return Err(LoginError::InvalidEmailOrPassword);
@@ -161,9 +186,14 @@ async fn auth_register(
     let uuid = Uuid::new_v4();
     let uuid_str = uuid.to_string();
 
+    let hashed_password = hash(&payload.password, DEFAULT_COST);
+    if hashed_password.is_err() {
+        return Err(RegisterError::GenericError);
+    }
+
     if let Err(db_err) = user_db_service.add_user(
         &payload.email,
-        &payload.password,
+        &hashed_password.unwrap(),
         &payload.display_name,
         &uuid_str,
     ) {
@@ -171,5 +201,5 @@ async fn auth_register(
         return Err(RegisterError::from(db_err));
     }
 
-    return Ok(HttpResponse::Ok());
+    return Ok(web::Json(RegisterResponseData { uuid: uuid_str }));
 }

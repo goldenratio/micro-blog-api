@@ -90,23 +90,40 @@ impl UserDbService {
         }
     }
 
-    pub fn get_user_from_email_and_password(
-        &self,
-        email: &str,
-        password: &str,
-    ) -> Result<User, UserDbError> {
-        if let Ok(mut statement) = self.conn.prepare(
-            "SELECT uuid, displayName FROM user WHERE email=:email AND password=:password limit 1;",
-        ) {
-            if let Ok(user_iter) =
-                statement.query_map(&[(":email", email), (":password", password)], |row| {
-                    Ok(User {
-                        uuid: row.get(0)?,
-                        display_name: row.get(1)?,
-                        email: email.to_owned(),
-                    })
+    pub fn get_password_from_email(&self, email: &str) -> Result<String, UserDbError> {
+        if let Ok(mut statement) = self
+            .conn
+            .prepare("SELECT password FROM user WHERE email=:email limit 1;")
+        {
+            if let Ok(user_iter) = statement.query_map(&[(":email", email)], |row| {
+                let password: String = row.get(0)?;
+                Ok(password)
+            }) {
+                let password_vec: Vec<_> = user_iter.collect();
+
+                if let Some(selected_password) = password_vec.get(0) {
+                    if let Ok(password) = selected_password {
+                        return Ok(password.clone());
+                    }
+                }
+            }
+        }
+
+        return Err(UserDbError::UserNotFound);
+    }
+
+    pub fn get_user_from_email(&self, email: &str) -> Result<User, UserDbError> {
+        if let Ok(mut statement) = self
+            .conn
+            .prepare("SELECT uuid, displayName FROM user WHERE email=:email limit 1;")
+        {
+            if let Ok(user_iter) = statement.query_map(&[(":email", email)], |row| {
+                Ok(User {
+                    uuid: row.get(0)?,
+                    display_name: row.get(1)?,
+                    email: email.to_owned(),
                 })
-            {
+            }) {
                 let user_vec: Vec<_> = user_iter.collect();
 
                 if let Some(selected_user) = user_vec.get(0) {
