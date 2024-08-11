@@ -14,8 +14,7 @@ use super::error_response::AppErrorResponse;
 
 #[derive(Serialize, Debug, Display)]
 pub enum LoginError {
-    GenericError = 10011,
-    InvalidEmailOrPassword,
+    InvalidEmailOrPassword = 10011,
 }
 
 #[derive(Serialize, Debug, Display)]
@@ -66,8 +65,7 @@ impl UserClaims {
 impl ResponseError for LoginError {
     fn status_code(&self) -> StatusCode {
         match self {
-            LoginError::InvalidEmailOrPassword => StatusCode::BAD_REQUEST,
-            LoginError::GenericError => StatusCode::INTERNAL_SERVER_ERROR,
+            LoginError::InvalidEmailOrPassword => StatusCode::BAD_REQUEST
         }
     }
 
@@ -76,10 +74,7 @@ impl ResponseError for LoginError {
 
         match self {
             LoginError::InvalidEmailOrPassword => HttpResponse::build(status)
-                .json(AppErrorResponse::from(LoginError::InvalidEmailOrPassword)),
-            LoginError::GenericError => {
-                HttpResponse::build(status).json(AppErrorResponse::from(LoginError::GenericError))
-            }
+                .json(AppErrorResponse::from(LoginError::InvalidEmailOrPassword))
         }
     }
 }

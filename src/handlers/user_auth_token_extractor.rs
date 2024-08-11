@@ -58,7 +58,7 @@ impl FromRequest for UserAuthentication {
                     uuid: user_claims.uuid,
                 }))
             }
-            Err(e) => {
+            Err(_) => {
                 // log::error!("token_result Error: {:?}", e);
                 ready(Err(ErrorUnauthorized("Invalid authentication token sent!")))
             }
