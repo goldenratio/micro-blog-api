@@ -69,9 +69,11 @@ impl UserDbService {
                     rusqlite::Error::SqliteFailure(sqlite_err, msg) => {
                         if sqlite_err.code == rusqlite::ErrorCode::ConstraintViolation {
                             let err_msg = msg.unwrap_or("-".to_string());
-                            if err_msg.contains("user.displayName)") {
+                            if err_msg.contains("user.displayName") {
                                 UserDbError::UserWithDisplayNameAlreadyExist
-                            } else if err_msg.contains("user.email)") {
+                            } else if err_msg.contains("user.emailVerified") {
+                                UserDbError::GenericError
+                            } else if err_msg.contains("user.email") {
                                 UserDbError::UserWithEmailAlreadyExist
                             } else {
                                 UserDbError::GenericError
@@ -82,6 +84,7 @@ impl UserDbService {
                     }
                     _ => UserDbError::GenericError,
                 };
+                // log::error!("{:?}", db_err);
                 return Err(db_err);
             }
         }

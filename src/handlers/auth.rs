@@ -50,14 +50,16 @@ struct RegisterRequestData {
 #[derive(Serialize)]
 struct UserClaims {
     exp: usize,
+    uuid: String,
 }
 
 impl UserClaims {
-    pub fn new(user_jwt_expiration_minutes: i64) -> Self {
+    pub fn new(user_jwt_expiration_minutes: i64, uuid: String) -> Self {
         let token_expiry_date =
             (Utc::now() + Duration::minutes(user_jwt_expiration_minutes)).timestamp() as usize;
         Self {
             exp: token_expiry_date,
+            uuid: uuid,
         }
     }
 }
@@ -130,7 +132,7 @@ async fn auth_login(
     if let Ok(auth_user) =
         user_db_service.get_user_from_email_and_password(&payload.email, &payload.password)
     {
-        let claims = UserClaims::new(state.env_settings.user_jwt_expiration_minutes);
+        let claims = UserClaims::new(state.env_settings.user_jwt_expiration_minutes, auth_user.uuid.clone());
 
         if let Ok(jwt_token) = encode(
             &Header::default(),
@@ -169,6 +171,7 @@ async fn auth_register(
         &payload.display_name,
         &uuid_str,
     ) {
+        log::error!("{:?}", db_err);
         return Err(RegisterError::from(db_err));
     }
 
