@@ -9,6 +9,7 @@ use handlers::{
     auth::{auth_login, auth_register},
     error_response::AppErrorResponse,
     health_check::health_check,
+    user_post::user_post,
 };
 
 #[actix_web::main]
@@ -42,6 +43,7 @@ async fn main() -> std::io::Result<()> {
                     .service(auth_login)
                     .service(auth_register),
             )
+            .service(web::scope("/user").service(user_post))
     })
     .bind(("127.0.0.1", 8080))?
     .run()

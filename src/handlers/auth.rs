@@ -36,7 +36,6 @@ struct LoginRequestData {
 #[serde(rename_all = "camelCase")]
 struct LoginSuccessResponse {
     jwt_token: String,
-    user_id: String,
 }
 
 #[derive(Deserialize, Debug)]
@@ -47,10 +46,10 @@ struct RegisterRequestData {
     display_name: String,
 }
 
-#[derive(Serialize)]
-struct UserClaims {
-    exp: usize,
-    uuid: String,
+#[derive(Serialize, Deserialize, Debug)]
+pub struct UserClaims {
+    pub exp: usize,
+    pub uuid: String,
 }
 
 impl UserClaims {
@@ -132,17 +131,17 @@ async fn auth_login(
     if let Ok(auth_user) =
         user_db_service.get_user_from_email_and_password(&payload.email, &payload.password)
     {
-        let claims = UserClaims::new(state.env_settings.user_jwt_expiration_minutes, auth_user.uuid.clone());
+        let claims = UserClaims::new(
+            state.env_settings.user_jwt_expiration_minutes,
+            auth_user.uuid.clone(),
+        );
 
         if let Ok(jwt_token) = encode(
             &Header::default(),
             &claims,
             &EncodingKey::from_secret(state.env_settings.user_jwt_secret.as_ref()),
         ) {
-            let response_data = LoginSuccessResponse {
-                jwt_token: jwt_token,
-                user_id: auth_user.uuid,
-            };
+            let response_data = LoginSuccessResponse { jwt_token };
             return Ok(web::Json(response_data));
         } else {
             log::error!("error generating jwt token for user: {:?}", &payload.email);
