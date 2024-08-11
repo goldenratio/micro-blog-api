@@ -11,7 +11,7 @@ use super::{error_response::AppErrorResponse, user_auth_token_extractor::UserAut
 
 #[derive(Serialize, Debug, Display)]
 pub enum UserPostError {
-    GenericError = 10031,
+    GenericError = 20011,
 }
 
 #[derive(Deserialize, Debug)]

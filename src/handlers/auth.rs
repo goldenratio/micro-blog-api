@@ -9,8 +9,10 @@ use crate::{app_data::app_state::AppState, services::user_db_service::UserDbErro
 
 use super::error_response::AppErrorResponse;
 
-// const JWT_EXPIRATION_MINUTES: i64 = 18;
-// const JWT_SECRET: &str = "AhYd]wP7sLn6c0bD9^X_onyWkVgY^b";
+#[derive(Serialize, Debug, Display)]
+pub enum AppError {
+    InvalidRequestPayload = 10001,
+}
 
 #[derive(Serialize, Debug, Display)]
 pub enum LoginError {

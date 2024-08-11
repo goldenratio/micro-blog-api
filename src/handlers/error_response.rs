@@ -1,7 +1,7 @@
 use serde::Serialize;
 
 use super::{
-    auth::{LoginError, RegisterError},
+    auth::{AppError, LoginError, RegisterError},
     user_post::UserPostError,
 };
 
@@ -10,6 +10,19 @@ use super::{
 pub struct AppErrorResponse {
     pub error_code: u16,
     pub error_message: String,
+}
+
+impl From<AppError> for AppErrorResponse {
+    fn from(value: AppError) -> AppErrorResponse {
+        match value {
+            AppError::InvalidRequestPayload => {
+                return AppErrorResponse {
+                    error_code: AppError::InvalidRequestPayload as u16,
+                    error_message: "Invalid request payload".to_string(),
+                };
+            }
+        }
+    }
 }
 
 impl From<LoginError> for AppErrorResponse {

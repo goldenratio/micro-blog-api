@@ -6,7 +6,7 @@ use actix_web::{error, middleware, web, App, HttpResponse, HttpServer};
 use app_data::app_state::AppState;
 use dotenv::dotenv;
 use handlers::{
-    auth::{auth_login, auth_register},
+    auth::{auth_login, auth_register, AppError},
     error_response::AppErrorResponse,
     health_check::health_check,
     user_post::user_post,
@@ -29,10 +29,7 @@ async fn main() -> std::io::Result<()> {
                     .error_handler(|err, _req| {
                         return error::InternalError::from_response(
                             err,
-                            HttpResponse::BadRequest().json(AppErrorResponse {
-                                error_code: 10001,
-                                error_message: "Invalid request payload".to_string(),
-                            }),
+                            HttpResponse::BadRequest().json(AppErrorResponse::from(AppError::InvalidRequestPayload)),
                         )
                         .into();
                     }),
