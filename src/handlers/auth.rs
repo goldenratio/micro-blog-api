@@ -1,11 +1,16 @@
 use actix_web::{http::StatusCode, post, web, HttpResponse, Responder, ResponseError};
+use chrono::{Duration, Utc};
 use derive_more::Display;
+use jsonwebtoken::{encode, EncodingKey, Header};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{app_data::app_state::AppState, services::user_db_service::UserDbError};
 
 use super::error_response::AppErrorResponse;
+
+// const JWT_EXPIRATION_MINUTES: i64 = 18;
+// const JWT_SECRET: &str = "AhYd]wP7sLn6c0bD9^X_onyWkVgY^b";
 
 #[derive(Serialize, Debug, Display)]
 pub enum LoginError {
@@ -40,6 +45,21 @@ struct RegisterRequestData {
     email: String,
     password: String,
     display_name: String,
+}
+
+#[derive(Serialize)]
+struct UserClaims {
+    exp: usize,
+}
+
+impl UserClaims {
+    pub fn new(user_jwt_expiration_minutes: i64) -> Self {
+        let token_expiry_date =
+            (Utc::now() + Duration::minutes(user_jwt_expiration_minutes)).timestamp() as usize;
+        Self {
+            exp: token_expiry_date,
+        }
+    }
 }
 
 impl ResponseError for LoginError {
@@ -101,7 +121,7 @@ impl From<UserDbError> for RegisterError {
 async fn auth_login(
     param_obj: web::Json<LoginRequestData>,
     state: web::Data<AppState>,
-) -> Result<(impl Responder), LoginError> {
+) -> Result<impl Responder, LoginError> {
     let payload = param_obj.into_inner();
     log::trace!("/auth {:?}", payload);
 
@@ -110,12 +130,22 @@ async fn auth_login(
     if let Ok(auth_user) =
         user_db_service.get_user_from_email_and_password(&payload.email, &payload.password)
     {
-        log::info!("brrrr {:?}", auth_user);
-        let response_data = LoginSuccessResponse {
-            jwt_token: "123".to_string(),
-            user_id: auth_user.uuid,
-        };
-        return Ok(web::Json(response_data));
+        let claims = UserClaims::new(state.env_settings.user_jwt_expiration_minutes);
+
+        if let Ok(jwt_token) = encode(
+            &Header::default(),
+            &claims,
+            &EncodingKey::from_secret(state.env_settings.user_jwt_secret.as_ref()),
+        ) {
+            let response_data = LoginSuccessResponse {
+                jwt_token: jwt_token,
+                user_id: auth_user.uuid,
+            };
+            return Ok(web::Json(response_data));
+        } else {
+            log::error!("error generating jwt token for user: {:?}", &payload.email);
+        }
+        // return Err(LoginError::GenericError);
     }
 
     return Err(LoginError::InvalidEmailOrPassword);

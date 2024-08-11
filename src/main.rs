@@ -4,6 +4,7 @@ mod services;
 
 use actix_web::{error, middleware, web, App, HttpResponse, HttpServer};
 use app_data::app_state::AppState;
+use dotenv::dotenv;
 use handlers::{
     auth::{auth_login, auth_register},
     error_response::AppErrorResponse,
@@ -13,6 +14,8 @@ use handlers::{
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     env_logger::init();
+    dotenv().ok();
+
     let app_state = web::Data::new(AppState::new());
 
     HttpServer::new(move || {

@@ -21,8 +21,8 @@ pub struct User {
 }
 
 impl UserDbService {
-    pub fn connect() -> Result<Self, UserDbError> {
-        match Connection::open("./db-collections/users.db") {
+    pub fn connect(db_collected_root_dir: &str) -> Result<Self, UserDbError> {
+        match Connection::open(format!("{}/users.db", db_collected_root_dir)) {
             Ok(conn) => {
                 match conn.execute(
                     "CREATE TABLE IF NOT EXISTS user (
