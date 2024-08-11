@@ -30,7 +30,7 @@ async fn main() -> std::io::Result<()> {
                         return error::InternalError::from_response(
                             err,
                             HttpResponse::BadRequest().json(AppErrorResponse {
-                                error_code: 0,
+                                error_code: 10001,
                                 error_message: "Invalid request payload".to_string(),
                             }),
                         )
