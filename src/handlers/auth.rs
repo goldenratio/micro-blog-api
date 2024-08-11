@@ -137,10 +137,6 @@ async fn auth_login(
     log::trace!("/auth {:?}", payload);
 
     let user_db_service = state.user_db_service.lock().unwrap();
-    let hashed_password = hash(payload.password.clone(), DEFAULT_COST);
-    if hashed_password.is_err() {
-        return Err(LoginError::GenericError);
-    }
 
     if let Ok(password_from_db) = user_db_service.get_password_from_email(&payload.email) {
         if let Ok(valid) = verify(&payload.password, &password_from_db) {
