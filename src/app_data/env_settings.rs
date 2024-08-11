@@ -15,7 +15,7 @@ impl EnvSettings {
                 .unwrap()
                 .parse::<i64>()
                 .expect("JWT_EXPIRATION_MINUTES must be a valid i64 number"),
-            user_jwt_secret: env::var("USER_JWT_SECRET").unwrap()
+            user_jwt_secret: env::var("USER_JWT_SECRET").unwrap(),
         }
     }
 }

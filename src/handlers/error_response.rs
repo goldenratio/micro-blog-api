@@ -2,7 +2,7 @@ use serde::Serialize;
 
 use super::{
     auth::{AppError, LoginError, RegisterError},
-    user_post::UserPostError,
+    user::UserPostError,
 };
 
 #[derive(Serialize, Debug)]
@@ -76,6 +76,12 @@ impl From<UserPostError> for AppErrorResponse {
                 return AppErrorResponse {
                     error_code: UserPostError::GenericError as u16,
                     error_message: "Unknown generic error".to_string(),
+                };
+            }
+            UserPostError::PostNotFound => {
+                return AppErrorResponse {
+                    error_code: UserPostError::PostNotFound as u16,
+                    error_message: "Post not found".to_string(),
                 };
             }
         }
