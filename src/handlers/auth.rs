@@ -17,8 +17,7 @@ pub enum AppError {
 
 #[derive(Serialize, Debug, Display)]
 pub enum LoginError {
-    GenericError = 10011,
-    InvalidEmailOrPassword,
+    InvalidEmailOrPassword = 10011,
 }
 
 #[derive(Serialize, Debug, Display)]
@@ -76,7 +75,6 @@ impl UserClaims {
 impl ResponseError for LoginError {
     fn status_code(&self) -> StatusCode {
         match self {
-            LoginError::GenericError => StatusCode::INTERNAL_SERVER_ERROR,
             LoginError::InvalidEmailOrPassword => StatusCode::BAD_REQUEST,
         }
     }
@@ -85,9 +83,6 @@ impl ResponseError for LoginError {
         let status = self.status_code();
 
         match self {
-            LoginError::GenericError => {
-                HttpResponse::build(status).json(AppErrorResponse::from(LoginError::GenericError))
-            }
             LoginError::InvalidEmailOrPassword => HttpResponse::build(status)
                 .json(AppErrorResponse::from(LoginError::InvalidEmailOrPassword)),
         }
