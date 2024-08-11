@@ -44,7 +44,6 @@ impl FromRequest for UserAuthentication {
             return ready(Err(ErrorUnauthorized("Invalid authentication token sent!")));
         }
         let client_auth_token = authentication_token[6..authentication_token.len()].trim();
-        // let admin_jwt_secret = env_settings.user_jwt_secret.as_str();
 
         let token_result: Result<TokenData<UserClaims>, JwtError> = decode::<UserClaims>(
             client_auth_token,
@@ -60,7 +59,7 @@ impl FromRequest for UserAuthentication {
                 }))
             }
             Err(e) => {
-                println!("token_result Error: {:?}", e);
+                // log::error!("token_result Error: {:?}", e);
                 ready(Err(ErrorUnauthorized("Invalid authentication token sent!")))
             }
         }

@@ -1,6 +1,9 @@
 use serde::Serialize;
 
-use super::auth::{LoginError, RegisterError};
+use super::{
+    auth::{LoginError, RegisterError},
+    user_post::UserPostError,
+};
 
 #[derive(Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -47,6 +50,19 @@ impl From<RegisterError> for AppErrorResponse {
                 return AppErrorResponse {
                     error_code: RegisterError::DisplayNameAlreadyExist as u16,
                     error_message: "An account with email already exist".to_string(),
+                };
+            }
+        }
+    }
+}
+
+impl From<UserPostError> for AppErrorResponse {
+    fn from(value: UserPostError) -> AppErrorResponse {
+        match value {
+            UserPostError::GenericError => {
+                return AppErrorResponse {
+                    error_code: UserPostError::GenericError as u16,
+                    error_message: "Unknown generic error".to_string(),
                 };
             }
         }
