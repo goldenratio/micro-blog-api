@@ -2,8 +2,10 @@ mod app_data;
 mod handlers;
 mod services;
 
+use std::sync::Mutex;
+
 use actix_web::{error, middleware, web, App, HttpResponse, HttpServer};
-use app_data::{user_db_state::UserDbState, env_settings::EnvSettings};
+use app_data::env_settings::EnvSettings;
 use dotenv::dotenv;
 use handlers::{
     auth::{auth_login, auth_register, AppError},
@@ -11,6 +13,7 @@ use handlers::{
     health_check::health_check,
     user::{user_get_post_by_id, user_get_posts, user_post},
 };
+use services::user_db_service::UserDbService;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -18,7 +21,9 @@ async fn main() -> std::io::Result<()> {
     dotenv().ok();
 
     let env_settings = EnvSettings::new();
-    let user_db_state = web::Data::new(UserDbState::new(&env_settings));
+    let user_db_service = UserDbService::connect(&env_settings.db_collection_path)
+        .expect("UserDbService error! db_collection_path folder maybe missing");
+    let user_db_state = web::Data::new(Mutex::new(user_db_service));
 
     HttpServer::new(move || {
         App::new()

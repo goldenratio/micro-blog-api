@@ -1,3 +1,5 @@
+use std::sync::Mutex;
+
 use actix_web::{http::StatusCode, post, web, HttpResponse, Responder, ResponseError};
 use bcrypt::{hash, verify, DEFAULT_COST};
 use chrono::{Duration, Utc};
@@ -6,7 +8,10 @@ use jsonwebtoken::{encode, EncodingKey, Header};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::{app_data::{user_db_state::UserDbState, env_settings::EnvSettings}, services::user_db_service::UserDbError};
+use crate::{
+    app_data::env_settings::EnvSettings,
+    services::user_db_service::{UserDbError, UserDbService},
+};
 
 use super::error_response::AppErrorResponse;
 
@@ -126,13 +131,13 @@ impl From<UserDbError> for RegisterError {
 #[post("/login")]
 async fn auth_login(
     param_obj: web::Json<LoginRequestData>,
-    user_db_state: web::Data<UserDbState>,
+    user_db_state: web::Data<Mutex<UserDbService>>,
     env_settings: web::Data<EnvSettings>,
 ) -> Result<impl Responder, LoginError> {
     let payload = param_obj.into_inner();
     log::trace!("/auth {:?}", payload);
 
-    let user_db_service = user_db_state.service.lock().unwrap();
+    let user_db_service = user_db_state.lock().unwrap();
 
     if let Ok(password_from_db) = user_db_service.get_password_from_email(&payload.email) {
         if let Ok(valid) = verify(&payload.password, &password_from_db) {
@@ -169,12 +174,12 @@ async fn auth_login(
 #[post("/register")]
 async fn auth_register(
     param_obj: web::Json<RegisterRequestData>,
-    user_db_state: web::Data<UserDbState>,
+    user_db_state: web::Data<Mutex<UserDbService>>,
 ) -> Result<impl Responder, RegisterError> {
     let payload = param_obj.into_inner();
     log::trace!("/register {:?}", payload);
 
-    let user_db_service = user_db_state.service.lock().unwrap();
+    let user_db_service = user_db_state.lock().unwrap();
     let uuid = Uuid::new_v4();
     let uuid_str = uuid.to_string();
 
