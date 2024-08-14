@@ -5,7 +5,7 @@ use derive_more::Display;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::app_data::app_state::AppState;
+use crate::app_data::env_settings::EnvSettings;
 
 use super::{error_response::AppErrorResponse, user_auth_token_extractor::UserAuthentication};
 
@@ -71,14 +71,14 @@ impl ResponseError for UserPostError {
 async fn user_post(
     user_auth: UserAuthentication,
     param_obj: web::Json<UserPostRequest>,
-    state: web::Data<AppState>,
+    env_settings: web::Data<EnvSettings>,
 ) -> Result<impl Responder, UserPostError> {
     let payload = param_obj.into_inner();
     log::info!("/post {:?}", payload);
 
     let user_db_file = format!(
         "{}/user_{}.db",
-        state.env_settings.db_collection_path, user_auth.uuid
+        env_settings.db_collection_path, user_auth.uuid
     );
 
     if !Path::new(&user_db_file).exists() {
@@ -129,14 +129,14 @@ async fn user_post(
 async fn user_get_post_by_id(
     user_auth: UserAuthentication,
     param_obj: web::Json<PostGetByPostIdRequest>,
-    state: web::Data<AppState>,
+    env_settings: web::Data<EnvSettings>,
 ) -> Result<impl Responder, UserPostError> {
     let payload = param_obj.into_inner();
     log::info!("/get-post-by-id {:?}", payload);
 
     let user_db_file = format!(
         "{}/user_{}.db",
-        state.env_settings.db_collection_path, user_auth.uuid
+        env_settings.db_collection_path, user_auth.uuid
     );
 
     if !Path::new(&user_db_file).exists() {
@@ -172,13 +172,13 @@ async fn user_get_post_by_id(
 #[post("/get-posts")]
 async fn user_get_posts(
     user_auth: UserAuthentication,
-    state: web::Data<AppState>,
+    env_settings: web::Data<EnvSettings>,
 ) -> Result<impl Responder, UserPostError> {
     log::info!("/get-posts");
 
     let user_db_file = format!(
         "{}/user_{}.db",
-        state.env_settings.db_collection_path, user_auth.uuid
+        env_settings.db_collection_path, user_auth.uuid
     );
 
     if !Path::new(&user_db_file).exists() {

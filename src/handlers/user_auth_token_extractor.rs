@@ -8,7 +8,7 @@ use jsonwebtoken::{
 use serde::{Deserialize, Serialize};
 use std::future::{ready, Ready};
 
-use crate::app_data::app_state::AppState;
+use crate::app_data::env_settings::EnvSettings;
 
 use super::auth::UserClaims;
 
@@ -24,8 +24,7 @@ impl FromRequest for UserAuthentication {
 
     fn from_request(req: &HttpRequest, _payload: &mut Payload) -> Self::Future {
         let req = req.clone();
-        let app_state = &req.app_data::<web::Data<AppState>>().unwrap();
-        let env_settings = &app_state.env_settings;
+        let env_settings = &req.app_data::<web::Data<EnvSettings>>().unwrap();
 
         let authorization_header_option: Option<&HeaderValue> =
             req.headers().get(actix_web::http::header::AUTHORIZATION);

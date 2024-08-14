@@ -6,7 +6,7 @@ use jsonwebtoken::{encode, EncodingKey, Header};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::{app_data::app_state::AppState, services::user_db_service::UserDbError};
+use crate::{app_data::{user_db_state::UserDbState, env_settings::EnvSettings}, services::user_db_service::UserDbError};
 
 use super::error_response::AppErrorResponse;
 
@@ -126,12 +126,13 @@ impl From<UserDbError> for RegisterError {
 #[post("/login")]
 async fn auth_login(
     param_obj: web::Json<LoginRequestData>,
-    state: web::Data<AppState>,
+    user_db_state: web::Data<UserDbState>,
+    env_settings: web::Data<EnvSettings>,
 ) -> Result<impl Responder, LoginError> {
     let payload = param_obj.into_inner();
     log::trace!("/auth {:?}", payload);
 
-    let user_db_service = state.user_db_service.lock().unwrap();
+    let user_db_service = user_db_state.service.lock().unwrap();
 
     if let Ok(password_from_db) = user_db_service.get_password_from_email(&payload.email) {
         if let Ok(valid) = verify(&payload.password, &password_from_db) {
@@ -141,14 +142,14 @@ async fn auth_login(
             // get user struct from DB
             if let Ok(auth_user) = user_db_service.get_user_from_email(&payload.email) {
                 let claims = UserClaims::new(
-                    state.env_settings.user_jwt_expiration_minutes,
+                    env_settings.user_jwt_expiration_minutes,
                     auth_user.uuid.clone(),
                 );
 
                 if let Ok(jwt_token) = encode(
                     &Header::default(),
                     &claims,
-                    &EncodingKey::from_secret(state.env_settings.user_jwt_secret.as_ref()),
+                    &EncodingKey::from_secret(env_settings.user_jwt_secret.as_ref()),
                 ) {
                     let response_data = LoginSuccessResponse {
                         jwt_token,
@@ -168,12 +169,12 @@ async fn auth_login(
 #[post("/register")]
 async fn auth_register(
     param_obj: web::Json<RegisterRequestData>,
-    state: web::Data<AppState>,
+    user_db_state: web::Data<UserDbState>,
 ) -> Result<impl Responder, RegisterError> {
     let payload = param_obj.into_inner();
     log::trace!("/register {:?}", payload);
 
-    let user_db_service = state.user_db_service.lock().unwrap();
+    let user_db_service = user_db_state.service.lock().unwrap();
     let uuid = Uuid::new_v4();
     let uuid_str = uuid.to_string();
 

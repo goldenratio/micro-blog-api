@@ -3,7 +3,7 @@ mod handlers;
 mod services;
 
 use actix_web::{error, middleware, web, App, HttpResponse, HttpServer};
-use app_data::app_state::AppState;
+use app_data::{user_db_state::UserDbState, env_settings::EnvSettings};
 use dotenv::dotenv;
 use handlers::{
     auth::{auth_login, auth_register, AppError},
@@ -17,12 +17,14 @@ async fn main() -> std::io::Result<()> {
     env_logger::init();
     dotenv().ok();
 
-    let app_state = web::Data::new(AppState::new());
+    let env_settings = EnvSettings::new();
+    let user_db_state = web::Data::new(UserDbState::new(&env_settings));
 
     HttpServer::new(move || {
         App::new()
             .wrap(middleware::Logger::default())
-            .app_data(app_state.clone())
+            .app_data(web::Data::new(env_settings.clone()))
+            .app_data(user_db_state.clone())
             .app_data(
                 web::JsonConfig::default()
                     .limit(1024)
