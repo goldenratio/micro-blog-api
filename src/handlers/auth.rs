@@ -8,9 +8,9 @@ use jsonwebtoken::{encode, EncodingKey, Header};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::{
-    app_data::env_settings::EnvSettings,
-    services::user_db_service::{UserDbError, UserDbService},
+use crate::services::{
+    env_settings::EnvSettings,
+    user_db_service::{UserDbError, UserDbService},
 };
 
 use super::error_response::AppErrorResponse;

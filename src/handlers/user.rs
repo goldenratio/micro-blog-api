@@ -5,7 +5,7 @@ use derive_more::Display;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::app_data::env_settings::EnvSettings;
+use crate::services::env_settings::EnvSettings;
 
 use super::{error_response::AppErrorResponse, user_auth_token_extractor::UserAuthentication};
 
@@ -183,7 +183,7 @@ async fn user_get_posts(
 
     if !Path::new(&user_db_file).exists() {
         log::error!("user DB does not exist! {:?}", user_auth.uuid);
-        return Err(UserPostError::GenericError);
+        return Ok(web::Json(PostListDataResponse { posts: [].to_vec() }));
     }
 
     if let Ok(conn) = rusqlite::Connection::open(&user_db_file) {

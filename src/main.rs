@@ -1,11 +1,9 @@
-mod app_data;
 mod handlers;
 mod services;
 
 use std::sync::Mutex;
 
 use actix_web::{error, middleware, web, App, HttpResponse, HttpServer};
-use app_data::env_settings::EnvSettings;
 use dotenv::dotenv;
 use handlers::{
     auth::{auth_login, auth_register, AppError},
@@ -13,7 +11,7 @@ use handlers::{
     health_check::health_check,
     user::{user_get_post_by_id, user_get_posts, user_post},
 };
-use services::user_db_service::UserDbService;
+use services::{env_settings::EnvSettings, user_db_service::UserDbService};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {

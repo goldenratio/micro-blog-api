@@ -8,7 +8,7 @@ use jsonwebtoken::{
 use serde::{Deserialize, Serialize};
 use std::future::{ready, Ready};
 
-use crate::app_data::env_settings::EnvSettings;
+use crate::services::env_settings::EnvSettings;
 
 use super::auth::UserClaims;
 
