@@ -1,3 +1,5 @@
+use std::{fs, io};
+
 use rusqlite::Connection;
 
 #[derive(Debug)]
@@ -20,8 +22,18 @@ pub struct User {
     pub email: String,
 }
 
+fn create_directory_if_not_exists(path: &str) -> io::Result<()> {
+    if !std::path::Path::new(path).exists() {
+        fs::create_dir_all(path)?;
+    }
+    Ok(())
+}
+
 impl UserDbService {
     pub fn connect(db_collected_root_dir: &str) -> Result<Self, UserDbError> {
+        create_directory_if_not_exists(&db_collected_root_dir)
+            .map_err(|_| UserDbError::GenericError)?;
+
         match Connection::open(format!("{}/users.db", db_collected_root_dir)) {
             Ok(conn) => {
                 match conn.execute(
